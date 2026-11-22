@@ -36,7 +36,7 @@ LuminaTech Global Lighting Solutions Ltd. is a specialized OEM/ODM manufacturer 
 
 ## Contact Information (Synthetic Showcase)
 - **Global Sales Director**: Alex Morgan
-- **Inquiry Desk Email**: `sales@luminatech-lighting.com`
-- **Technical Support**: `support@luminatech-lighting.com`
+- **Inquiry Desk Email**: `sales@luminatech.example`
+- **Technical Support**: `support@luminatech.example`
 - **Direct Phone / WhatsApp**: `+1 (555) 019-2834`
-- **Official Portal**: `https://www.luminatech-lighting.com`
+- **Official Portal**: `https://www.luminatech.example`

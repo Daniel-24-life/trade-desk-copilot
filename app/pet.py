@@ -349,9 +349,9 @@ class SpeechBubbleCard(QWidget):
             },
             "contact": {
                 "rep": "Alex Morgan (Sales Director)",
-                "email": "sales@luminatech-lighting.com",
+                "email": "sales@luminatech.example",
                 "phone": "+1 (555) 019-2834",
-                "url": "https://www.luminatech-lighting.com",
+                "url": "https://www.luminatech.example",
             }
         }
         pil_img = gen.generate(data)

@@ -4,7 +4,7 @@ from core.card_generator import QuotationCardGenerator, generate_qr_image, gener
 
 
 def test_pure_python_qr():
-    qr = generate_qr_image("https://www.luminatech-lighting.com")
+    qr = generate_qr_image("https://www.luminatech.example")
     assert qr is not None
     assert qr.size[0] > 50
     assert qr.size[1] > 50
@@ -32,9 +32,9 @@ def test_card_generator():
         },
         "contact": {
             "rep": "Alex Morgan",
-            "email": "sales@luminatech-lighting.com",
+            "email": "sales@luminatech.example",
             "phone": "+1 (555) 019-2834",
-            "url": "https://www.luminatech-lighting.com"
+            "url": "https://www.luminatech.example"
         }
     }
     img = gen.generate(data)

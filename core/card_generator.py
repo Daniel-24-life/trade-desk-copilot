@@ -238,9 +238,9 @@ class QuotationCardGenerator:
             },
             "contact": {
                 "rep": "Alex Morgan (Sales Director)",
-                "email": "sales@luminatech-lighting.com",
+                "email": "sales@luminatech.example",
                 "phone": "+1 (555) 019-2834",
-                "url": "https://www.luminatech-lighting.com"
+                "url": "https://www.luminatech.example"
             }
         }
         """
@@ -362,9 +362,9 @@ class QuotationCardGenerator:
         rep = contact.get("rep", "Alex Morgan (Sales Director)")
         draw.text((50, 920), rep, fill="#ffffff", font=self.font_h2)
 
-        email = f"Email: {contact.get('email', 'sales@luminatech-lighting.com')}"
+        email = f"Email: {contact.get('email', 'sales@luminatech.example')}"
         phone = f"Direct / WhatsApp: {contact.get('phone', '+1 (555) 019-2834')}"
-        url = contact.get("url", "https://www.luminatech-lighting.com")
+        url = contact.get("url", "https://www.luminatech.example")
 
         draw.text((50, 965), email, fill="#94a3b8", font=self.font_body)
         draw.text((50, 998), phone, fill="#94a3b8", font=self.font_body)
@@ -409,9 +409,9 @@ def generate_sample_card(output_path: Union[str, Path]) -> str:
         },
         "contact": {
             "rep": "Alex Morgan (Sales Director)",
-            "email": "sales@luminatech-lighting.com",
+            "email": "sales@luminatech.example",
             "phone": "+1 (555) 019-2834",
-            "url": "https://www.luminatech-lighting.com",
+            "url": "https://www.luminatech.example",
         }
     }
     card = gen.generate(data)
