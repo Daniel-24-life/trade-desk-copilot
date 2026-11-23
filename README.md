@@ -1,43 +1,66 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/cover-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="docs/cover-light.svg">
-  <img src="docs/cover-light.svg" alt="Project overview" width="1280">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/cover-dark.svg" />
+  <source media="(prefers-color-scheme: light)" srcset="docs/cover-light.svg" />
+  <img src="docs/cover-light.svg" alt="Trade Desk Copilot" width="1280" />
 </picture>
 
 # Trade Desk Copilot
 
-An offline desktop workbench that turns a fictional B2B inquiry into a reviewable reply draft and quote card.
+Track an inquiry across turns, find relevant catalog evidence, and prepare a quote for human review.
 
-[中文说明](README.zh.md) · [Portfolio](https://github.com/Daniel-24-life/portfolio)
+[▶ Demo](#demo) · [中文](README.zh.md) · [![CI](https://github.com/Daniel-24-life/trade-desk-copilot/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Daniel-24-life/trade-desk-copilot/actions/workflows/ci.yml) · [MIT](LICENSE) · Python 3.10+
 
-![Quote card rendered from fictional catalog data](assets/screenshots/sample_quotation_card.png)
+## Demo
 
-## What it demonstrates
+<img src="docs/demo.gif" alt="Trade Desk Copilot" width="800" />
 
-- Track buyer requirements across turns and keep conversations separate.
-- Retrieve catalog evidence, prepare a bilingual draft, and review it before use.
-- Render a quote card from the bundled fictional materials.
+A real terminal run followed by a redacted rendering of the separate example quotation.
 
-**Stack** · Python, PyQt5, Markdown catalog, Pillow
+## Problem
+
+Inquiry details often arrive in fragments. A reviewer needs to see which requirements are on record, which products support the reply, and which fields still need checking.
+
+## What I built
+
+- Track buyer requirements as the conversation evolves.
+- Retrieve the matching catalog entries for a reply draft.
+- Show the draft to an operator before it is used.
+- Render a quotation card from the demo catalog.
+
+## How it works
+
+```mermaid
+flowchart LR
+    A["Buyer inquiry"] --> B["Catalog match"] --> C["Draft review"]
+```
+
+## Run in 60 seconds
+
+```sh
+python -m pip install -r requirements.txt
+python run_demo.py
+python run_demo.py --card
+```
+
+Enter 2 at the prompt to replay the recorded case. Open the desktop interface with `python run_demo.py --gui`.
+
+## Tests
+
+**14 tests passed.** [Verified GitHub Actions run](https://github.com/Daniel-24-life/trade-desk-copilot/actions/runs/45105812783).
+
+```sh
+python -m pytest tests -q
+```
 
 ## Repository layout
 
 | Path | Contents |
 | --- | --- |
-| [`app/`](app/) | Desktop interface |
-| [`core/`](core/) | Dialogue state, retrieval, draft and card logic |
-| [`corpus/`](corpus/) | Synthetic product and company fixtures |
-| [`tests/`](tests/) | Offline behavior checks |
+| [`app/`](app/) | PyQt5 desktop workbench |
+| [`core/`](core/) | Dialogue state, retrieval and quote rendering |
+| [`corpus/`](corpus/) | Catalog and company fixtures |
+| [`tests/`](tests/) | Inquiry, retrieval and card checks |
 
-## Run locally
+Reference material · [architecture_overview.svg](assets/screenshots/architecture_overview.svg)
 
-```sh
-python -m pip install -r requirements.txt
-python run_demo.py
-python -m pytest tests -q
-```
-
-
-## Scope and limits
-
-The repository uses fictional catalog, company, and inquiry data. It demonstrates offline workflows. Sources, recommendations, and pricing in the demo carry no commercial commitment.
+<sub>Demo data is synthetic; modeled on real-world workflows. The desktop workbench uses fixture-driven responses, and quote cards carry no commercial commitment.</sub>
