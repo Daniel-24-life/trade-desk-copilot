@@ -127,14 +127,26 @@ class DialogueStateTracker:
             except ValueError:
                 pass
 
-        bulk_matches = re.findall(r"\b(\d{2,6})\s*(?:pcs|units|pieces|sets|cartons|ctns)?\b", msg_lower)
-        for bm in bulk_matches:
-            val = int(bm)
-            # Avoid mistaking common years or voltages (110, 220, 2026) as quantity
-            if val not in (110, 220, 230, 240, 277, 2024, 2025, 2026):
-                if val >= 20:
-                    state.quantity = val
-                    break
+        bulk_matches = re.finditer(
+            r"(?<![\w.$-])([1-9]\d{0,5})\s*(?:pcs|units|pieces|sets|cartons|ctns|台|件)\b",
+            msg_lower,
+        )
+        for match in bulk_matches:
+            if sample_match and match.start() < sample_match.end() and sample_match.start() < match.end():
+                continue
+            preceding = msg_lower[:match.start()]
+            if re.search(r"\bmoq\s*(?:shows|is|of|:)?\s*$", preceding):
+                continue
+            state.quantity = int(match.group(1))
+            break
+
+        else:
+            labeled_quantity = re.search(
+                r"\b(?:bulk quantity|order quantity|quantity|qty)\s*(?:(?:is|of)\s*|:\s*)?([1-9]\d{0,5})(?![\w.])",
+                msg_lower,
+            )
+            if labeled_quantity:
+                state.quantity = int(labeled_quantity.group(1))
 
         # 3. Voltage Specification
         if re.search(r"\b110\s*v(?:olts?)?\b", msg_lower):

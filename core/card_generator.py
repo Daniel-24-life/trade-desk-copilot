@@ -259,10 +259,50 @@ class QuotationCardGenerator:
         # 4. Commercial Tiers & Trust (640 - 890 px)
         self._draw_commercial_section(draw, data.get("commercial", {}))
 
-        # 5. Footer & QR (890 - 1080 px)
-        self._draw_footer(draw, data.get("contact", {}))
-
+        if data.get("review_only"):
+            self._draw_review_footer(draw)
+        else:
+            self._draw_footer(draw, data.get("contact", {}))
         return img
+
+    def generate_review_card(self, state, catalog):
+        """Render a catalog review from fixture metadata and the operator-reviewed inquiry."""
+        def quantity(key):
+            value = state.get(key)
+            return f"{value} pcs" if value is not None else "To confirm"
+
+        moq = catalog.get("moq")
+        return self.generate({
+            "review_only": True,
+            "brand": "Trade Desk Copilot",
+            "category_badge": "CATALOG REVIEW",
+            "product_title": state["product_name"].split(" (")[0],
+            "model_sku": catalog["sku"],
+            "price_highlight": "For review",
+            "specs": [
+                {"label": "Catalog input voltage", "val": catalog.get("voltage") or "To confirm"},
+                {"label": "Requested dimming", "val": state.get("dimming") or "To confirm"},
+                {"label": "Requested bulk quantity", "val": quantity("bulk_quantity")},
+                {"label": "Requested sample quantity", "val": quantity("sample_quantity")},
+            ],
+            "commercial": {
+                "price_tiers_label": "Catalog minimum order",
+                "price_tiers": f"{moq} pcs" if moq is not None else "To confirm",
+                "lead_time": "To confirm",
+                "cbm_note": catalog.get("carton_spec") or "To confirm",
+                "warranty": "To confirm",
+            },
+        })
+
+    def _draw_review_footer(self, draw: ImageDraw.Draw):
+        draw.rectangle([30, 900, self.WIDTH - 30, 1050], fill=self.COLOR_PRIMARY)
+        draw.text((50, 920), "DEMO · REVIEW REQUIRED", fill="#ffffff", font=self.font_h2)
+        draw.text(
+            (50, 975),
+            "Check availability, pricing and commercial terms before sharing a quote.",
+            fill="#cbd5e1",
+            font=self.font_body,
+        )
 
     def _draw_header(self, draw: ImageDraw.Draw, data: Dict[str, Any]):
         # White card background for header
@@ -274,11 +314,15 @@ class QuotationCardGenerator:
         brand = data.get("brand", "LuminaTech Global Lighting Solutions")
         draw.text((85, 48), brand, fill=self.COLOR_PRIMARY, font=self.font_subtitle)
 
-        tagline = "Verified OEM/ODM Manufacturer · ISO 9001:2015 · 100% 4-Hour Burn-in Tested"
+        tagline = (
+            "Catalog fixture and buyer requirements"
+            if data.get("review_only")
+            else "Verified OEM/ODM Manufacturer · ISO 9001:2015 · 100% 4-Hour Burn-in Tested"
+        )
         draw.text((85, 88), tagline, fill=self.COLOR_MUTED, font=self.font_small)
 
         # Trust Badges (Right side)
-        badge_text = "CE / RoHS / FCC"
+        badge_text = "DEMO" if data.get("review_only") else "CE / RoHS / FCC"
         bbox = draw.textbbox((0, 0), badge_text, font=self.font_badge)
         bw = bbox[2] - bbox[0] + 24
         bx = self.WIDTH - 50 - bw
@@ -297,13 +341,18 @@ class QuotationCardGenerator:
 
         # Product Title
         title = data.get("product_title", "Commercial LED Fixture")
-        draw.text((50, 222), title, fill=self.COLOR_PRIMARY, font=self.font_title)
+        title_font = self.font_h2 if data.get("review_only") else self.font_title
+        draw.text((50, 222), title, fill=self.COLOR_PRIMARY, font=title_font)
 
         # SKU & Warranty highlights
         sku = f"Model SKU: {data.get('model_sku', 'LT-DL01')}"
         draw.text((50, 280), sku, fill=self.COLOR_SECONDARY, font=self.font_h3)
 
-        desc = "High-efficiency optical reflector, low stroboscopic constant current, 50,000h lifespan."
+        desc = (
+            "Pricing and commercial terms require confirmation."
+            if data.get("review_only")
+            else "High-efficiency optical reflector, low stroboscopic constant current, 50,000h lifespan."
+        )
         draw.text((50, 320), desc, fill=self.COLOR_MUTED, font=self.font_body)
 
         # Price tag pill on right
@@ -313,7 +362,8 @@ class QuotationCardGenerator:
         px = self.WIDTH - 50 - pw
         draw.rounded_rectangle([px, 205, px + pw, 280], radius=12, fill=self.COLOR_PRIMARY)
         draw.text((px + 18, 220), price_text, fill="#ffffff", font=self.font_price)
-        draw.text((px + 18, 290), "FOB Shenzhen Tiers", fill=self.COLOR_MUTED, font=self.font_small)
+        price_label = "Pending confirmation" if data.get("review_only") else "FOB Shenzhen Tiers"
+        draw.text((px + 18, 290), price_label, fill=self.COLOR_MUTED, font=self.font_small)
 
     def _draw_specs_matrix(self, draw: ImageDraw.Draw, specs: List[Dict[str, str]]):
         draw.rectangle([30, 395, self.WIDTH - 30, 635], fill=self.COLOR_CARD, outline=self.COLOR_BORDER, width=2)
@@ -343,7 +393,7 @@ class QuotationCardGenerator:
         draw.line([50, 704, self.WIDTH - 50, 704], fill=self.COLOR_BORDER, width=1)
 
         items = [
-            ("Wholesale Tiers", comm.get("price_tiers", "$9.60 - $10.50 FOB")),
+            (comm.get("price_tiers_label", "Wholesale Tiers"), comm.get("price_tiers", "$9.60 - $10.50 FOB")),
             ("Production Lead Time", comm.get("lead_time", "3-5d Samples / 18-22d Bulk")),
             ("Export Packaging & CBM", comm.get("cbm_note", "24 pcs/ctn · 0.052 CBM")),
             ("Warranty & Trade Terms", comm.get("warranty", "5-Year Full Replacement Guarantee")),

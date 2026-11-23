@@ -2,7 +2,7 @@
 Trade Desk Copilot - Floating Desktop HUD Workbench
 Provides a lightweight floating desktop companion with interactive DST chips,
 bilingual translation capsules, quick negotiation chips, and 1080x1080 quotation card preview.
-Supports both live global hotkey hook and zero-dependency offline simulation.
+Runs locally with bundled buyer inquiries.
 """
 
 import sys
@@ -14,7 +14,7 @@ from typing import Dict, Any, List, Optional
 
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QLabel, QPushButton, QVBoxLayout,
-    QHBoxLayout, QTextEdit, QLineEdit, QScrollArea, QFrame,
+    QHBoxLayout, QGridLayout, QTextEdit, QLineEdit, QScrollArea, QFrame,
     QGraphicsDropShadowEffect, QButtonGroup, QDialog
 )
 from PyQt5.QtCore import Qt, QPoint, QTimer, pyqtSignal, QRectF
@@ -32,8 +32,16 @@ from core.agent import (
 )
 from core.dst import DialogueState
 from core.card_generator import QuotationCardGenerator
+from core.clipboard_cleaner import format_for_target_app
 from core.mock_engine import MOCK_INQUIRIES
 from app.styles import HUD_STYLESHEET
+
+
+PRODUCT_CATALOG = {
+    "downlight": "commercial_downlights",
+    "fan_light": "smart_fan_lights",
+    "led_driver": "led_drivers_matrix",
+}
 
 
 class DSTChip(QPushButton):
@@ -43,6 +51,8 @@ class DSTChip(QPushButton):
     def __init__(self, slot_key: str, label_text: str, parent=None):
         super().__init__(f"{label_text} ✕", parent)
         self.slot_key = slot_key
+        self.setAccessibleName(f"Remove {label_text}")
+        self.setToolTip(f"Remove {label_text}")
         self.setStyleSheet("""
             QPushButton {
                 background-color: #1e293b;
@@ -69,7 +79,7 @@ class CardPreviewDialog(QDialog):
     """High-resolution modal preview for the generated 1080x1080 quotation card."""
     def __init__(self, pixmap: QPixmap, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("1080x1080 Visual Quotation Card Preview")
+        self.setWindowTitle("Quotation review · Demo catalog")
         self.setFixedSize(620, 680)
         self.setStyleSheet("background-color: #0f172a; color: #f8fafc;")
 
@@ -81,7 +91,7 @@ class CardPreviewDialog(QDialog):
         layout.addWidget(img_label)
 
         btn_box = QHBoxLayout()
-        copy_btn = QPushButton("Copy Card Image to Clipboard", self)
+        copy_btn = QPushButton("Copy Review Card", self)
         copy_btn.setStyleSheet("""
             background-color: #0d9488; color: white; padding: 8px 16px;
             border-radius: 6px; font-weight: bold;
@@ -144,9 +154,11 @@ class SpeechBubbleCard(QWidget):
 
         # 3. Interactive DST Slot Chips
         self.chips_container = QWidget(self)
-        self.chips_layout = QHBoxLayout(self.chips_container)
+        self.chips_layout = QGridLayout(self.chips_container)
         self.chips_layout.setContentsMargins(0, 0, 0, 0)
         self.chips_layout.setSpacing(6)
+        self.chips_layout.setColumnStretch(0, 1)
+        self.chips_layout.setColumnStretch(1, 1)
         container_layout.addWidget(self.chips_container)
 
         # 4. Style Switcher
@@ -174,6 +186,7 @@ class SpeechBubbleCard(QWidget):
         # 5. Dynamic Response Content Area
         self.response_edit = QTextEdit(self)
         self.response_edit.setObjectName("ResponseEdit")
+        self.response_edit.setAccessibleName("Reply draft")
         self.response_edit.setMinimumHeight(140)
         self.response_edit.setMaximumHeight(260)
         container_layout.addWidget(self.response_edit)
@@ -196,6 +209,7 @@ class SpeechBubbleCard(QWidget):
         # 7. Inline Refinement Input Bar
         self.refine_input = QLineEdit(self)
         self.refine_input.setObjectName("RefineInput")
+        self.refine_input.setAccessibleName("Refine the reply draft")
         self.refine_input.setPlaceholderText("Type instruction (e.g. '改成报$9.20', '加上支持混批')...")
         self.refine_input.returnPressed.connect(self.on_refine_enter)
         container_layout.addWidget(self.refine_input)
@@ -206,7 +220,7 @@ class SpeechBubbleCard(QWidget):
         self.copy_btn.setProperty("class", "PrimaryAction")
         self.copy_btn.clicked.connect(self.copy_clean_text)
 
-        self.card_btn = QPushButton("🖼️ 1080 Quotation Card", self)
+        self.card_btn = QPushButton("Quotation preview", self)
         self.card_btn.setProperty("class", "SecondaryAction")
         self.card_btn.clicked.connect(self.open_card_preview)
 
@@ -221,80 +235,58 @@ class SpeechBubbleCard(QWidget):
         self.load_scenario(self.current_scenario_idx)
 
     def load_scenario(self, idx: int):
+        self.current_scenario_idx = idx
         scenario = MOCK_INQUIRIES[idx % len(MOCK_INQUIRIES)]
         self.title_label.setText(f"{scenario['buyer_name']} · {scenario['app_hint']}")
-        
         session_id = f"sim_session_{scenario['id']}"
-        res = self.agent.process_inquiry(
+        state = self.agent.dst.get_or_create(session_id)
+        process = self.agent.render_inquiry if state.turn_count else self.agent.process_inquiry
+        self.current_response_data = process(
             buyer_message=scenario["message"],
             session_id=session_id,
             buyer_name=scenario["buyer_name"],
             style=self.current_style,
-            target_app=scenario["app_hint"]
+            target_app=scenario["app_hint"],
         )
-        self.current_response_data = res
+        result = self.current_response_data
+        self.translation_label.setText(
+            f"【买家原话】: {scenario['message']}\n【回复策略】: {result['chinese_summary']}"
+        )
+        self.response_edit.setHtml(result["formatted"]["bubble_html"])
+        self.response_edit.document().setModified(False)
+        self._refresh_chips(result["state"])
+        catalog = self._selected_catalog()
+        self.card_btn.setEnabled(catalog is not None)
+        self.card_btn.setText("Quotation preview" if catalog else "No catalog product")
 
-        # Update translation capsule
-        self.translation_label.setText(f"【买家原话意图】: {scenario['message']}\n【策略直译】: {res['chinese_summary']}")
-        
-        # Update response text (using bubble html)
-        self.response_edit.setHtml(res["formatted"]["bubble_html"])
-
-        # Refresh DST chips
-        self._refresh_chips(res["state"])
-
-    def _refresh_chips(self, state_dict: Dict[str, Any]):
-        # Clear existing chips
+    def _refresh_chips(self, state):
         while self.chips_layout.count():
-            item = self.chips_layout.takeAt(0)
-            widget = item.widget()
-            if widget:
-                widget.deleteLater()
+            widget = self.chips_layout.takeAt(0).widget()
+            widget.hide()
+            widget.deleteLater()
 
-        # Add chips for active slots
-        if state_dict.get("product_name"):
-            short_name = state_dict["product_name"].split("(")[0].strip()
-            chip = DSTChip("product", f"Category: {short_name}", self)
+        labels = (
+            ("product", "Category", state["product_name"]),
+            ("bulk_quantity", "Bulk", state["bulk_quantity"]),
+            ("sample_quantity", "Sample", state["sample_quantity"]),
+            ("voltage", "Voltage", state["voltage"]),
+            ("dimming", "Dimming", state["dimming"]),
+            ("destination_zip", "To", state["destination_zip"]),
+        )
+        active = [(key, label, value) for key, label, value in labels if value is not None]
+        for index, (key, label, value) in enumerate(active):
+            if key == "product":
+                value = value.split("(")[0].strip()
+            elif key in {"bulk_quantity", "sample_quantity"}:
+                value = f"{value} pcs"
+            chip = DSTChip(key, f"{label}: {value}", self.chips_container)
             chip.slot_removed.connect(self.remove_slot)
-            self.chips_layout.addWidget(chip)
-
-        if state_dict.get("bulk_quantity"):
-            chip = DSTChip("bulk_quantity", f"Bulk: {state_dict['bulk_quantity']} pcs", self)
-            chip.slot_removed.connect(self.remove_slot)
-            self.chips_layout.addWidget(chip)
-
-        if state_dict.get("sample_quantity"):
-            chip = DSTChip("sample_quantity", f"Sample: {state_dict['sample_quantity']} pcs", self)
-            chip.slot_removed.connect(self.remove_slot)
-            self.chips_layout.addWidget(chip)
-
-        if state_dict.get("dimming"):
-            chip = DSTChip("dimming", f"Dimming: {state_dict['dimming']}", self)
-            chip.slot_removed.connect(self.remove_slot)
-            self.chips_layout.addWidget(chip)
-
-        if state_dict.get("destination_zip"):
-            chip = DSTChip("destination_zip", f"To: {state_dict['destination_zip']}", self)
-            chip.slot_removed.connect(self.remove_slot)
-            self.chips_layout.addWidget(chip)
-
-        self.chips_layout.addStretch()
+            row, column = divmod(index, 2)
+            self.chips_layout.addWidget(chip, row, column)
 
     def remove_slot(self, slot_key: str):
-        session_id = self.current_response_data.get("session_id", "default")
-        self.agent.dst.remove_slot(session_id, slot_key)
-        # Reload current scenario with updated state
-        scenario = MOCK_INQUIRIES[self.current_scenario_idx % len(MOCK_INQUIRIES)]
-        res = self.agent.process_inquiry(
-            buyer_message=scenario["message"],
-            session_id=session_id,
-            buyer_name=scenario["buyer_name"],
-            style=self.current_style,
-            target_app=scenario["app_hint"]
-        )
-        self.current_response_data = res
-        self.response_edit.setHtml(res["formatted"]["bubble_html"])
-        self._refresh_chips(res["state"])
+        self.agent.dst.remove_slot(self.current_response_data["session_id"], slot_key)
+        self.load_scenario(self.current_scenario_idx)
 
     def set_style(self, style_key: str):
         self.current_style = style_key
@@ -311,58 +303,45 @@ class SpeechBubbleCard(QWidget):
             self.refine_input.clear()
 
     def apply_refinement(self, instruction: str):
-        current_text = self.current_response_data.get("english_reply", "")
+        current_text = (
+            self.response_edit.toPlainText()
+            if self.response_edit.document().isModified()
+            else self.current_response_data["english_reply"]
+        )
         refined = self.agent.refine_response(current_text, instruction)
         self.current_response_data["english_reply"] = refined
-        from core.clipboard_cleaner import format_for_target_app
-        formatted = format_for_target_app(refined, app_hint=self.current_response_data.get("intent", {}).get("app_hint", "general"))
+        scenario = MOCK_INQUIRIES[self.current_scenario_idx % len(MOCK_INQUIRIES)]
+        formatted = format_for_target_app(refined, app_hint=scenario["app_hint"])
         self.current_response_data["formatted"] = formatted
         self.response_edit.setHtml(formatted["bubble_html"])
+        self.response_edit.document().setModified(False)
 
     def copy_clean_text(self):
-        text = self.current_response_data.get("formatted", {}).get("text", "")
+        text = (
+            self.response_edit.toPlainText()
+            if self.response_edit.document().isModified()
+            else self.current_response_data["formatted"]["text"]
+        )
         if text:
             QApplication.clipboard().setText(text)
             self.copy_btn.setText("✓ Copied!")
             QTimer.singleShot(1500, lambda: self.copy_btn.setText("📋 Copy Clean Text"))
 
-    def open_card_preview(self):
-        gen = QuotationCardGenerator()
-        state = self.current_response_data.get("state", {})
-        data = {
-            "brand": "LuminaTech Global Lighting Solutions",
-            "category_badge": state.get("product_name", "COMMERCIAL ARCHITECTURAL").upper()[:24],
-            "product_title": state.get("product_name", "Architectural LED Fixture"),
-            "model_sku": "LT-SERIES-PRO",
-            "price_highlight": "From $7.80",
-            "specs": [
-                {"label": "Rated Power & CCT", "val": "18W COB · 3000K / 4000K"},
-                {"label": "Optical Comfort", "val": "Ra > 92 · UGR < 19 Anti-Glare"},
-                {"label": "Voltage & Dimming", "val": state.get("dimming", "DALI-2 / 0-10V")},
-                {"label": "Logistics & Carton", "val": "24 pcs/ctn · 0.052 CBM"},
-            ],
-            "commercial": {
-                "price_tiers": "$10.50 (MOQ 20) · $9.60 (MOQ 100+)",
-                "lead_time": "3-5d Samples · 18-22d Bulk Order",
-                "cbm_note": "Export Carton with Corner Protectors",
-                "warranty": "5-Year Full Replacement Guarantee",
-            },
-            "contact": {
-                "rep": "Alex Morgan (Sales Director)",
-                "email": "sales@luminatech.example",
-                "phone": "+1 (555) 019-2834",
-                "url": "https://www.luminatech.example",
-            }
-        }
-        pil_img = gen.generate(data)
-        buf = io.BytesIO()
-        pil_img.save(buf, format="PNG")
-        qimg = QImage()
-        qimg.loadFromData(buf.getvalue())
-        pixmap = QPixmap.fromImage(qimg)
+    def _selected_catalog(self):
+        product = self.current_response_data["state"]["product"]
+        document = self.agent.loader.get_document(PRODUCT_CATALOG.get(product, ""))
+        return document if document and document.metadata.get("sku") else None
 
-        dialog = CardPreviewDialog(pixmap, self)
-        dialog.exec_()
+    def open_card_preview(self):
+        catalog = self._selected_catalog()
+        if catalog is None:
+            return
+        state = self.current_response_data["state"]
+        image = QuotationCardGenerator().generate_review_card(state, catalog.metadata)
+        buffer = io.BytesIO()
+        image.save(buffer, format="PNG")
+        pixmap = QPixmap.fromImage(QImage.fromData(buffer.getvalue()))
+        CardPreviewDialog(pixmap, self).exec_()
 
 
 class FloatingPetWidget(QWidget):
@@ -419,9 +398,9 @@ class FloatingPetWidget(QWidget):
 
 
 def run_pet_application():
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
     app = QApplication(sys.argv)
-    app.setAttribute(Qt.AA_EnableHighDpiScaling, True)
-    app.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
 
     agent = TradeDeskAgent()
     pet = FloatingPetWidget(agent)

@@ -98,7 +98,22 @@ class TradeDeskAgent:
         """End-to-end inquiry processing: intent -> DST update -> RAG retrieval -> synthesis."""
         intent = self.analyze_buyer_intent(buyer_message)
         state = self.dst.update_from_buyer_message(session_id, buyer_message, intent)
+        return self._render_response(buyer_message, state, intent, buyer_name, style, target_app)
 
+    def render_inquiry(
+        self,
+        buyer_message: str,
+        session_id: str,
+        buyer_name: Optional[str] = None,
+        style: str = STYLE_GOLD_NEGOTIATION,
+        target_app: str = "general",
+    ) -> Dict[str, Any]:
+        """Render against the reviewed state without recording another buyer turn."""
+        state = self.dst.get_or_create(session_id)
+        intent = self.analyze_buyer_intent(buyer_message)
+        return self._render_response(buyer_message, state, intent, buyer_name, style, target_app)
+
+    def _render_response(self, buyer_message, state, intent, buyer_name, style, target_app):
         # Retrieval query enrichment from DST slots
         query_parts = [buyer_message]
         if state.product_name:
@@ -120,7 +135,7 @@ class TradeDeskAgent:
         formatted = format_for_target_app(english_reply, app_hint=target_app)
 
         return {
-            "session_id": session_id,
+            "session_id": state.session_id,
             "intent": intent,
             "state": state.to_dict(),
             "matched_references": matched_chunks,
@@ -251,10 +266,16 @@ class TradeDeskAgent:
         price_match = re.search(r"\$(\d+(?:\.\d+)?)", refinement_instruction)
         qty_match = re.search(r"(\d+)\s*(?:台|pcs|units)", refinement_instruction)
         if price_match or qty_match:
-            p_val = price_match.group(0) if price_match else "$9.60"
-            q_val = qty_match.group(1) if qty_match else "100"
-            special_offer = f"**Special Management Approval**: For your order of **{q_val} pcs**, we can approve a direct project rate of **{p_val} FOB**."
-            refined += f"\n\n{special_offer}"
+            price = f"{price_match.group(0)} FOB" if price_match else "price to confirm"
+            quantity = f"{qty_match.group(1)} pcs" if qty_match else "quantity to confirm"
+            offer = f"**Proposed terms**: {quantity} at {price}, subject to review."
+            refined += f"\n\n{offer}"
+
+        discount = re.search(r"(?<![\d.])(\d+(?:\.\d+)?)\s*%", refinement_instruction)
+        if discount and ("discount" in instr_lower or "折扣" in refinement_instruction):
+            rate = float(discount.group(1))
+            if 0 < rate <= 100:
+                refined += f"\n\n**Proposed {rate:g}% discount**, subject to review."
 
         # 4. Add Factory Audit / Verification
         if any(w in instr_lower for w in ["验厂", "合规", "证书", "audit", "cert"]):

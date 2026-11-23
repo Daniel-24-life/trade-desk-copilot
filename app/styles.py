@@ -64,7 +64,7 @@ QPushButton.StyleButton:hover {
     color: #f8fafc;
 }
 QPushButton.StyleButton:checked {
-    background-color: #0d9488;
+    background-color: #0f766e;
     color: #ffffff;
     border: 1px solid #14b8a6;
 }
@@ -84,7 +84,7 @@ QPushButton.ChipButton:hover {
 }
 
 QPushButton.PrimaryAction {
-    background-color: #0d9488;
+    background-color: #0f766e;
     color: #ffffff;
     border: none;
     border-radius: 6px;
@@ -93,7 +93,7 @@ QPushButton.PrimaryAction {
     font-weight: bold;
 }
 QPushButton.PrimaryAction:hover {
-    background-color: #0f766e;
+    background-color: #115e59;
 }
 
 QPushButton.SecondaryAction {
@@ -106,5 +106,14 @@ QPushButton.SecondaryAction {
 }
 QPushButton.SecondaryAction:hover {
     background-color: #475569;
+}
+
+QPushButton.SecondaryAction:disabled {
+    background-color: #1e293b;
+    color: #94a3b8;
+}
+
+QPushButton:focus {
+    border: 1px solid #5eead4;
 }
 """

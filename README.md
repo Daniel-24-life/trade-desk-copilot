@@ -12,9 +12,9 @@ Track an inquiry across turns, find relevant catalog evidence, and prepare a quo
 
 ## Demo
 
-<img src="docs/demo.gif" alt="Trade Desk Copilot" width="800" />
+<img src="docs/demo.gif" alt="Remove a requirement in the desktop workbench and open a catalog quote review" width="800" />
 
-A real terminal run followed by a redacted rendering of the separate example quotation.
+The desktop demo inspects a hotel inquiry, removes the dimming requirement with the keyboard, then opens the catalog review for a fan-light inquiry.
 
 ## Problem
 
@@ -38,15 +38,16 @@ flowchart LR
 
 ```sh
 python -m pip install -r requirements.txt
-python run_demo.py
-python run_demo.py --card
+python run_demo.py --gui
 ```
 
-Enter 2 at the prompt to replay the recorded case. Open the desktop interface with `python run_demo.py --gui`.
+Remove the dimming slot in the first inquiry, choose **Next Scenario**, and open **Quotation preview** for the second inquiry.
+
+Run `python run_demo.py` for the terminal walkthrough or `python run_demo.py --card` to export the standalone sample card.
 
 ## Tests
 
-**14 tests passed.** [Verified GitHub Actions run](https://github.com/Daniel-24-life/trade-desk-copilot/actions/runs/45105812783).
+**22 tests passed on Windows.** [GitHub Actions workflow](https://github.com/Daniel-24-life/trade-desk-copilot/actions/workflows/ci.yml).
 
 ```sh
 python -m pytest tests -q

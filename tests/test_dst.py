@@ -45,3 +45,17 @@ def test_dst_quantity_discrimination():
     state = dst.update_from_buyer_message("sess_1", "Our bulk order is 1000 pcs, but first send 2 samples for testing.")
     assert state.quantity == 1000
     assert state.sample_quantity == 2
+
+
+
+@pytest.mark.parametrize("message,quantity,samples", [
+    ("We use E26/E27 bulbs, ship to ZIP 90001. Trial run of 300 pcs.", 300, None),
+    ("Please ship 2 samples of an 18W downlight; our ZIP is 90001.", None, 2),
+    ("We need ISO 9001 and accept USD 10.50.", None, None),
+    ("Your MOQ shows 100 pcs. Can we start with 20 pcs?", 20, None),
+    ("Quantity is 150 with 0-10V dimming.", 150, None),
+])
+def test_qty_extraction_ignores_unrelated_numbers(message, quantity, samples):
+    state = DialogueStateTracker().update_from_buyer_message("buyer", message)
+    assert state.quantity == quantity
+    assert state.sample_quantity == samples

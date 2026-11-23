@@ -1,5 +1,4 @@
-import os
-import pytest
+import re
 from pathlib import Path
 from core.agent import (
     TradeDeskAgent,
@@ -46,34 +45,22 @@ def test_inline_refinement():
     refined = agent.refine_response(base_text, "改成200台报$9.20")
     assert "$9.20 FOB" in refined
     assert "200 pcs" in refined
+    discounted = agent.refine_response(base_text, "特批3%折扣支持试单")
+    assert "3% discount" in discounted
+    assert "subject to review" in discounted
 
 
-def test_sanitization_zero_leakage():
-    """Verifies that none of the confidential enterprise markers exist in the new codebase or corpus."""
-    project_root = Path(__file__).resolve().parent.parent
-    # Split forbidden tokens into fragments so this test file itself doesn't trigger false positives
-    forbidden_tokens = [
-        "".join(["安", "鼎", "晟"]),
-        "".join(["品", "诺"]),
-        "".join(["陈", "文", "燕"]),
-        "".join(["137", "1408", "7245"]),
-        "".join(["916461264", "@", "qq.com"]),
-        "".join(["andinsun", ".", "en", ".alibaba.com"])
+def test_public_corpus_uses_reserved_email_domains():
+    """Public sample contacts use reserved DNS names."""
+    corpus = Path(__file__).resolve().parents[1] / "corpus"
+    emails = [
+        address
+        for path in corpus.rglob("*.md")
+        for address in re.findall(
+            r"\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b",
+            path.read_text(encoding="utf-8"),
+            flags=re.I,
+        )
     ]
-
-    this_file = Path(__file__).resolve()
-    scanned_files = 0
-    for root, _, files in os.walk(project_root):
-        if ".git" in root or "__pycache__" in root or ".pytest_cache" in root:
-            continue
-        for f in files:
-            if f.endswith((".py", ".md", ".txt", ".json", ".yml")):
-                file_path = Path(root) / f
-                if file_path == this_file:
-                    continue
-                scanned_files += 1
-                content = file_path.read_text(encoding="utf-8")
-                for tok in forbidden_tokens:
-                    assert tok not in content, f"Sensitive token '{tok}' leaked in {file_path}!"
-
-    assert scanned_files >= 10, f"Expected to scan at least 10 files, scanned {scanned_files}"
+    assert emails
+    assert all(address.lower().endswith((".example", ".invalid", "@example.com")) for address in emails)

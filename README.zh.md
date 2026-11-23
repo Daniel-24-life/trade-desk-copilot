@@ -12,9 +12,9 @@
 
 ## Demo
 
-<img src="docs/demo.gif" alt="外贸询盘工作台" width="800" />
+<img src="docs/demo.gif" alt="桌面端移除一个需求字段并打开目录报价复核" width="800" />
 
-真实终端运行后展示独立的样例报价卡，画面已裁掉联络栏和二维码。
+桌面演示依次展示查看酒店询盘、按空格移除调光字段、切换到风扇灯询盘，以及打开目录报价复核。
 
 ## 要解决的问题
 
@@ -37,15 +37,16 @@ flowchart LR
 
 ```sh
 python -m pip install -r requirements.txt
-python run_demo.py
-python run_demo.py --card
+python run_demo.py --gui
 ```
 
-终端提示后输入 2 复现演示。桌面窗口可运行 `python run_demo.py --gui`。
+打开桌面窗口后，在首条询盘移除调光字段。点 **Next Scenario** 切换到第二条，再打开 **Quotation preview**。
+
+也可运行 `python run_demo.py` 进入终端，或用 `python run_demo.py --card` 单独生成样例报价卡。
 
 ## 测试
 
-实测 **14 项通过**。[通过的 GitHub Actions 运行](https://github.com/Daniel-24-life/trade-desk-copilot/actions/runs/45105812783)。
+Windows 上实测 **22 项通过**。[CI 工作流](https://github.com/Daniel-24-life/trade-desk-copilot/actions/workflows/ci.yml)。
 
 ```sh
 python -m pytest tests -q
