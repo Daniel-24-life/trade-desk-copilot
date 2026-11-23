@@ -1,3 +1,9 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/cover-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/cover-light.svg">
+  <img src="docs/cover-light.svg" alt="Project overview" width="1280">
+</picture>
+
 # Trade Desk Copilot · 外贸桌面智能协作助手
 
 <div align="center">
@@ -5,12 +11,12 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/)
 [![CI Status](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
-[![Portfolio](https://img.shields.io/badge/Showcase-AIfile%20%2313-0d9488.svg)](https://github.com/Daniel-24-life/AIfile)
+[![Portfolio](https://img.shields.io/badge/Showcase-AIfile%20%2313-0d9488.svg)](https://github.com/Daniel-24-life/portfolio)
 
 **面向 B2B 出海商务与外贸业务员的轻量级桌面 HUD 协作工作台**
 多买家会话隔离 · 交互式 DST 槽位追踪 · 真实知识库 RAG 注入 · 宿主感知剪贴板清洗 · 1080×1080 视觉报价卡生成
 
-[English](README.en.md) | [中文说明](README.md)
+[English](README.md) | [中文说明](README.md)
 
 </div>
 
@@ -125,6 +131,6 @@ tests/test_retriever.py::test_hybrid_retriever PASSED                  [100%]
 ---
 
 ## 🔗 相关链接与作品集
-- **AIfile 作品集目录**：[AIfile Portfolio (#13)](https://github.com/Daniel-24-life/AIfile)
+- **AIfile 作品集目录**：[AIfile Portfolio (#13)](https://github.com/Daniel-24-life/portfolio)
 - **开发者个人主页**：[Daniel-24-life](https://github.com/Daniel-24-life)
 - **互补项目**：[buyer-research-agent (售前潜客深度调研 Agent)](https://github.com/Daniel-24-life/buyer-research-agent)
